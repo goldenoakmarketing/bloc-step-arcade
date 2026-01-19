@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Test, console} from "forge-std/Test.sol";
 import {ArcadeVault} from "../src/ArcadeVault.sol";
+import {IArcadeVault} from "../src/interfaces/IArcadeVault.sol";
 import {StakingPool} from "../src/StakingPool.sol";
 import {StabilityReserve} from "../src/StabilityReserve.sol";
 import {YeetEngine} from "../src/YeetEngine.sol";
@@ -10,6 +11,9 @@ import {MockERC20} from "./mocks/MockERC20.sol";
 import {MockPriceFeed} from "./mocks/MockPriceFeed.sol";
 
 contract ArcadeVaultTest is Test {
+    // Local event definition for testing
+    event YeetTriggered(address indexed yeeter, uint8 quarterNumber, uint256 timestamp);
+
     ArcadeVault public arcadeVault;
     StakingPool public stakingPool;
     StabilityReserve public stabilityReserve;
@@ -127,7 +131,7 @@ contract ArcadeVaultTest is Test {
     function test_YeetTriggerEmitsEvent() public {
         vm.prank(alice);
         vm.expectEmit(true, false, false, true);
-        emit ArcadeVault.YeetTriggered(alice, 6, block.timestamp);
+        emit YeetTriggered(alice, 6, block.timestamp);
         arcadeVault.buyQuarters(6);
     }
 

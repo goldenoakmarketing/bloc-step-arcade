@@ -148,7 +148,7 @@ contract StabilityReserve is IStabilityReserve, Ownable, ReentrancyGuard {
         ) = priceFeed.latestRoundData();
 
         require(answer > 0, "StabilityReserve: invalid price");
-        require(updatedAt > block.timestamp - PRICE_STALENESS, "StabilityReserve: stale price");
+        require(updatedAt <= block.timestamp && block.timestamp - updatedAt < PRICE_STALENESS, "StabilityReserve: stale price");
         require(answeredInRound >= roundId, "StabilityReserve: stale round");
 
         return uint256(answer);

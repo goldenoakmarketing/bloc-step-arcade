@@ -238,13 +238,13 @@ contract ArcadeVault is IArcadeVault, Ownable, ReentrancyGuard {
 
         // Transfer to staking pool
         if (stakingAmt > 0 && address(stakingPool) != address(0)) {
-            blocToken.safeApprove(address(stakingPool), stakingAmt);
+            blocToken.forceApprove(address(stakingPool), stakingAmt);
             stakingPool.addRewards(stakingAmt);
         }
 
         // Transfer to stability reserve
         if (stabilityAmt > 0 && address(stabilityReserve) != address(0)) {
-            blocToken.safeApprove(address(stabilityReserve), stabilityAmt);
+            blocToken.forceApprove(address(stabilityReserve), stabilityAmt);
             stabilityReserve.deposit(stabilityAmt);
         }
 
