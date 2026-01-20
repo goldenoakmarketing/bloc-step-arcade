@@ -22,7 +22,7 @@ contract ArcadeVault is IArcadeVault, Ownable, ReentrancyGuard {
 
     uint256 public constant override quarterAmount = 250e18; // 250 $BLOC
     uint256 public constant override quarterDuration = 900; // 15 minutes in seconds
-    uint256 public constant override yeetTrigger = 6; // Every 6th quarter
+    uint256 public constant override yeetTrigger = 8; // Every 8th quarter
 
     mapping(address => uint8) public userQuarterCount;
     mapping(address => uint256) public userTimeBalance;

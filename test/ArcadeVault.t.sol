@@ -76,7 +76,7 @@ contract ArcadeVaultTest is Test {
         assertEq(arcadeVault.profitWallet(), profitWallet);
         assertEq(arcadeVault.quarterAmount(), QUARTER_AMOUNT);
         assertEq(arcadeVault.quarterDuration(), QUARTER_DURATION);
-        assertEq(arcadeVault.yeetTrigger(), 6);
+        assertEq(arcadeVault.yeetTrigger(), 8);
     }
 
     function test_BuyQuarter() public {
@@ -120,9 +120,9 @@ contract ArcadeVaultTest is Test {
     }
 
     function test_YeetTrigger() public {
-        // Buy 6 quarters to trigger yeet
+        // Buy 8 quarters to trigger yeet
         vm.prank(alice);
-        arcadeVault.buyQuarters(6);
+        arcadeVault.buyQuarters(8);
 
         // Quarter count should reset to 0 after triggering yeet
         assertEq(arcadeVault.getUserQuarterCount(alice), 0);
@@ -131,8 +131,8 @@ contract ArcadeVaultTest is Test {
     function test_YeetTriggerEmitsEvent() public {
         vm.prank(alice);
         vm.expectEmit(true, false, false, true);
-        emit YeetTriggered(alice, 6, block.timestamp);
-        arcadeVault.buyQuarters(6);
+        emit YeetTriggered(alice, 8, block.timestamp);
+        arcadeVault.buyQuarters(8);
     }
 
     function test_ConsumeTime() public {
