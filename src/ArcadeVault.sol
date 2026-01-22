@@ -39,9 +39,9 @@ contract ArcadeVault is IArcadeVault, Ownable, ReentrancyGuard {
     address public profitWallet;
 
     // Distribution percentages in basis points (total = 10000)
-    uint256 public stakingShare = 4000; // 40%
-    uint256 public stabilityShare = 3000; // 30%
-    uint256 public profitShare = 3000; // 30%
+    uint256 public stakingShare = 6000; // 60%
+    uint256 public stabilityShare = 2500; // 25%
+    uint256 public profitShare = 1500; // 15%
 
     uint256 public constant BASIS_POINTS = 10_000;
     uint256 public constant DISTRIBUTION_INTERVAL = 7 days;

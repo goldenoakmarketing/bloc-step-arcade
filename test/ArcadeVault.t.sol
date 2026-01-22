@@ -194,8 +194,8 @@ contract ArcadeVaultTest is Test {
         // Vault should be empty
         assertEq(arcadeVault.vaultBalance(), 0);
 
-        // Profit wallet should have received 30%
-        uint256 expectedProfit = (vaultBefore * 3000) / 10000;
+        // Profit wallet should have received 15%
+        uint256 expectedProfit = (vaultBefore * 1500) / 10000;
         assertEq(blocToken.balanceOf(profitWallet) - profitBalanceBefore, expectedProfit);
     }
 
