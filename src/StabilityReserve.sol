@@ -37,6 +37,14 @@ interface IUniswapV2Router {
         uint256 deadline
     ) external payable returns (uint256[] memory amounts);
 
+    function swapExactTokensForETH(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
     function WETH() external pure returns (address);
 }
 
@@ -172,9 +180,21 @@ contract StabilityReserve is IStabilityReserve, Ownable, ReentrancyGuard {
 
         reserveBalance -= amount;
 
-        // Sell reserve tokens for ETH, then buy back $BLOC
-        // This is a simplified implementation - in production you'd want more sophisticated logic
-        blocToken.safeTransfer(address(this), amount);
+        // Approve router to spend BLOC tokens
+        blocToken.forceApprove(address(router), amount);
+
+        // Swap BLOC → WETH via the DEX router (sell reserve BLOC to buy back from market)
+        address[] memory path = new address[](2);
+        path[0] = address(blocToken);
+        path[1] = router.WETH();
+
+        router.swapExactTokensForETH(
+            amount,
+            0, // Accept any amount of ETH (owner-gated, so slippage is trusted)
+            path,
+            address(this),
+            block.timestamp
+        );
 
         // Update last price after buyback
         lastPrice = currentPrice;

@@ -80,14 +80,17 @@ contract YeetEngine is IYeetEngine, Ownable, ReentrancyGuard {
         bytes32 expectedHash = keccak256(abi.encodePacked(secret, msg.sender));
         require(commits[msg.sender] == expectedHash, "YeetEngine: invalid reveal");
 
+        // Cache commit block before clearing state
+        uint256 cachedCommitBlock = commitBlock[msg.sender];
+
         // Clear the commit
         delete commits[msg.sender];
         delete commitBlock[msg.sender];
 
-        // Generate random seed using commit block hash and revealed secret
+        // Generate random seed using cached commit block hash and revealed secret
         bytes32 seed = keccak256(
             abi.encodePacked(
-                blockhash(commitBlock[msg.sender] + MIN_COMMIT_DELAY),
+                blockhash(cachedCommitBlock + MIN_COMMIT_DELAY),
                 secret,
                 msg.sender,
                 block.timestamp
@@ -155,8 +158,8 @@ contract YeetEngine is IYeetEngine, Ownable, ReentrancyGuard {
         // Update leaderboard
         leaderboard[from] += amount;
 
-        // Transfer tokens from sender to recipient
-        blocToken.safeTransferFrom(from, to, amount);
+        // Transfer tokens from engine balance (funded by vault) to recipient
+        blocToken.safeTransfer(to, amount);
 
         emit YeetSent(from, to, amount, block.timestamp);
     }

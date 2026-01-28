@@ -270,16 +270,48 @@ contract ArcadeVaultTest is Test {
         assertEq(arcadeVault.timeUntilNextDistribution(), 0);
     }
 
-    function test_EmergencyWithdraw() public {
+    function test_EmergencyWithdrawTimelock() public {
         vm.prank(alice);
         arcadeVault.buyQuarters(10);
 
         uint256 ownerBalanceBefore = blocToken.balanceOf(owner);
 
+        // Step 1: Request withdrawal
         vm.prank(owner);
-        arcadeVault.emergencyWithdraw(address(blocToken), 1000e18);
+        arcadeVault.requestEmergencyWithdraw(address(blocToken), 1000e18);
+
+        // Step 2: Executing before timelock should revert
+        vm.prank(owner);
+        vm.expectRevert("ArcadeVault: timelock not expired");
+        arcadeVault.executeEmergencyWithdraw();
+
+        // Step 3: Fast forward past 48-hour timelock
+        vm.warp(block.timestamp + 48 hours + 1);
+
+        // Step 4: Execute withdrawal
+        vm.prank(owner);
+        arcadeVault.executeEmergencyWithdraw();
 
         assertEq(blocToken.balanceOf(owner), ownerBalanceBefore + 1000e18);
+    }
+
+    function test_CancelEmergencyWithdraw() public {
+        vm.prank(alice);
+        arcadeVault.buyQuarters(10);
+
+        // Request withdrawal
+        vm.prank(owner);
+        arcadeVault.requestEmergencyWithdraw(address(blocToken), 1000e18);
+
+        // Cancel it
+        vm.prank(owner);
+        arcadeVault.cancelEmergencyWithdraw();
+
+        // Executing after cancel should revert
+        vm.warp(block.timestamp + 48 hours + 1);
+        vm.prank(owner);
+        vm.expectRevert("ArcadeVault: no pending withdrawal");
+        arcadeVault.executeEmergencyWithdraw();
     }
 
     function testFuzz_BuyQuarters(uint256 count) public {

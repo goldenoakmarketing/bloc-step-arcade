@@ -27,6 +27,7 @@ contract ArcadeVault is IArcadeVault, Ownable, ReentrancyGuard {
     mapping(address => uint8) public userQuarterCount;
     mapping(address => uint256) public userTimeBalance;
     mapping(address => uint256) public totalYeeted;
+    mapping(address => bool) public pendingYeet;
 
     uint256 public override vaultBalance;
     uint256 public lastDistribution;
@@ -45,6 +46,18 @@ contract ArcadeVault is IArcadeVault, Ownable, ReentrancyGuard {
 
     uint256 public constant BASIS_POINTS = 10_000;
     uint256 public constant DISTRIBUTION_INTERVAL = 7 days;
+    uint256 public constant EMERGENCY_TIMELOCK = 48 hours;
+
+    // Emergency withdrawal timelock
+    struct WithdrawalRequest {
+        address token;
+        uint256 amount;
+        uint256 requestedAt;
+    }
+    WithdrawalRequest public pendingWithdrawal;
+    event EmergencyWithdrawRequested(address token, uint256 amount, uint256 executeAfter);
+    event EmergencyWithdrawExecuted(address token, uint256 amount);
+    event EmergencyWithdrawCancelled();
 
     modifier onlyGameServer() {
         require(msg.sender == gameServer, "ArcadeVault: caller is not game server");
@@ -175,6 +188,7 @@ contract ArcadeVault is IArcadeVault, Ownable, ReentrancyGuard {
             // Check for yeet trigger
             if (userQuarterCount[msg.sender] == yeetTrigger) {
                 userQuarterCount[msg.sender] = 0;
+                pendingYeet[msg.sender] = true;
                 emit YeetTriggered(msg.sender, uint8(yeetTrigger), block.timestamp);
             }
         }
@@ -236,10 +250,13 @@ contract ArcadeVault is IArcadeVault, Ownable, ReentrancyGuard {
         uint256 stabilityAmt = (toDistribute * stabilityShare) / BASIS_POINTS;
         uint256 profitAmt = toDistribute - stakingAmt - stabilityAmt;
 
-        // Transfer to staking pool
-        if (stakingAmt > 0 && address(stakingPool) != address(0)) {
+        // Transfer to staking pool (only if there are active stakers)
+        if (stakingAmt > 0 && address(stakingPool) != address(0) && stakingPool.totalStaked() > 0) {
             blocToken.forceApprove(address(stakingPool), stakingAmt);
             stakingPool.addRewards(stakingAmt);
+        } else if (stakingAmt > 0) {
+            // No stakers: redirect staking share to stability reserve
+            stabilityAmt += stakingAmt;
         }
 
         // Transfer to stability reserve
@@ -304,8 +321,13 @@ contract ArcadeVault is IArcadeVault, Ownable, ReentrancyGuard {
         uint256 amount
     ) external onlyOwner {
         require(address(yeetEngine) != address(0), "ArcadeVault: yeet engine not set");
+        require(pendingYeet[from], "ArcadeVault: no pending yeet");
 
+        pendingYeet[from] = false;
         totalYeeted[from] += amount;
+
+        // Transfer tokens from vault to YeetEngine, which then distributes to recipient
+        blocToken.safeTransfer(address(yeetEngine), amount);
         yeetEngine.executeYeet(from, to, amount);
     }
 
@@ -322,15 +344,54 @@ contract ArcadeVault is IArcadeVault, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Emergency withdraw function
-     * @param token Token to withdraw
+     * @notice Request an emergency withdrawal (starts 48-hour timelock)
+     * @param token Token to withdraw (address(0) for ETH)
      * @param amount Amount to withdraw
      */
-    function emergencyWithdraw(address token, uint256 amount) external onlyOwner {
+    function requestEmergencyWithdraw(address token, uint256 amount) external onlyOwner {
+        require(amount > 0, "ArcadeVault: zero amount");
+        require(pendingWithdrawal.requestedAt == 0, "ArcadeVault: withdrawal already pending");
+
+        pendingWithdrawal = WithdrawalRequest({
+            token: token,
+            amount: amount,
+            requestedAt: block.timestamp
+        });
+
+        emit EmergencyWithdrawRequested(token, amount, block.timestamp + EMERGENCY_TIMELOCK);
+    }
+
+    /**
+     * @notice Execute a pending emergency withdrawal after timelock expires
+     */
+    function executeEmergencyWithdraw() external onlyOwner {
+        require(pendingWithdrawal.requestedAt > 0, "ArcadeVault: no pending withdrawal");
+        require(
+            block.timestamp >= pendingWithdrawal.requestedAt + EMERGENCY_TIMELOCK,
+            "ArcadeVault: timelock not expired"
+        );
+
+        address token = pendingWithdrawal.token;
+        uint256 amount = pendingWithdrawal.amount;
+
+        // Clear the pending withdrawal
+        delete pendingWithdrawal;
+
         if (token == address(0)) {
             payable(owner()).transfer(amount);
         } else {
             IERC20(token).safeTransfer(owner(), amount);
         }
+
+        emit EmergencyWithdrawExecuted(token, amount);
+    }
+
+    /**
+     * @notice Cancel a pending emergency withdrawal
+     */
+    function cancelEmergencyWithdraw() external onlyOwner {
+        require(pendingWithdrawal.requestedAt > 0, "ArcadeVault: no pending withdrawal");
+        delete pendingWithdrawal;
+        emit EmergencyWithdrawCancelled();
     }
 }

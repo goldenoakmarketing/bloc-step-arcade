@@ -178,12 +178,14 @@ contract YeetEngineTest is Test {
     function test_ExecuteYeet() public {
         uint256 amount = 100e18;
 
+        // Fund the engine (vault transfers tokens before calling executeYeet)
+        blocToken.mint(address(yeetEngine), amount);
+
         vm.prank(vault);
         yeetEngine.executeYeet(alice, bob, amount);
 
         assertEq(yeetEngine.leaderboard(alice), amount);
         assertEq(blocToken.balanceOf(bob), INITIAL_BALANCE + amount);
-        assertEq(blocToken.balanceOf(alice), INITIAL_BALANCE - amount);
     }
 
     function test_ExecuteYeetOnlyVault() public {
@@ -200,7 +202,9 @@ contract YeetEngineTest is Test {
         vm.prank(vault);
         yeetEngine.addEligibleUser(bob);
 
-        // Execute yeets to build leaderboard
+        // Fund the engine and execute yeets to build leaderboard
+        blocToken.mint(address(yeetEngine), 300e18);
+
         vm.prank(vault);
         yeetEngine.executeYeet(alice, charlie, 200e18);
 
@@ -216,6 +220,8 @@ contract YeetEngineTest is Test {
     }
 
     function test_GetYeetedAmount() public {
+        blocToken.mint(address(yeetEngine), 100e18);
+
         vm.prank(vault);
         yeetEngine.executeYeet(alice, bob, 100e18);
 
