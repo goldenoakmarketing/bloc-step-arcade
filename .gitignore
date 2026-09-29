@@ -2,16 +2,12 @@
 cache/
 out/
 
-# Ignores development broadcast logs
-!/broadcast
-/broadcast/*/31337/
-/broadcast/**/dry-run/
-
-# Docs
-docs/
+# Generated deployment and simulation records
+broadcast/
 
 # Dotenv file
-.env
+.env*
+!.env.example
 
 # Node modules (if using npm for any tooling)
 node_modules/
@@ -19,3 +15,8 @@ node_modules/
 # Coverage
 lcov.info
 coverage/
+
+# Local editor and operating-system files
+*.log
+.DS_Store
+Thumbs.db
